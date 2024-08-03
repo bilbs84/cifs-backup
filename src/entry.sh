@@ -5,10 +5,8 @@ CFG_FILE=/etc/config.ini
 GREEN="\033[0;32m"
 YELLOW="\033[1;33m"
 NC="\033[0m"
-
-# Set the working directory
+error_file=$(mktemp)
 WORK_DIR="/usr/local/bin"
-cd "$WORK_DIR" || exit
 
 # Function to log to Docker logs
 log() {
@@ -25,13 +23,15 @@ log_error() {
 }
 
 # Function to syncronise the timezone
-if [ -n "$TZ" ] && [ -f "/usr/share/zoneinfo/$TZ" ]; then
-    echo $TZ > /etc/timezone
-    ln -snf /usr/share/zoneinfo$TZ /etc/localtime
-    log "Setting timezone to ${TZ}"
-else
-    log_error <<< "Invalid or unset TZ variable: $TZ"
-fi
+set_tz() {
+    if [ -n "$TZ" ] && [ -f "/usr/share/zoneinfo/$TZ" ]; then
+        echo $TZ > /etc/timezone
+        ln -snf /usr/share/zoneinfo$TZ /etc/localtime
+        log "Setting timezone to ${TZ}"
+    else
+        log_error <<< "Invalid or unset TZ variable: $TZ"
+    fi
+}
 
 # Function to read the configuration file
 read_config() {
@@ -55,14 +55,6 @@ read_config() {
         }
         END { print "exclusions=\"" exclusions "\"" }
     ' $CFG_FILE)"
-
-
-#    eval "$(awk -F "=" -v section="$section" '
-#        BEGIN { in_section=0 }
-#        /^\[/{ in_section=0 }
-#        $0 ~ "\\["section"\\]" { in_section=1; next }
-#        in_section && !/^#/ && $1 { gsub(/^ +| +$/, "", $1); gsub(/^ +| +$/, "", $2); print $1"=\""$2"\"" }
-#    ' $CFG_FILE)"
 }
 
 # Function to check the mountpoint
@@ -85,28 +77,35 @@ mount_cifs() {
     mount -t cifs -o username="$user",password="$password",vers=3.0 //"$server"/"$share" "$mount_point" 2> >(log_error)
 }
 
-error_file=cron_error.err
-
 # Create or clear the crontab file
-crontab -l > mycron 2> "$error_file"
+sync_cron() {
+    crontab -l > mycron 2> "$error_file"
 
-if [ -s "$error_file" ]; then
-    log_error <<< "$(cat "$error_file")"
-    rm "$error_file"
-    : > mycron
-else
-    rm "$error_file"
-fi
-
-# Loop through each section and add the cron job
-for section in $(awk -F '[][]' '/\[[^]]+\]/{print $2}' $CFG_FILE); do
-    read_config "$section"
-    if [[ -n "$schedule" ]]; then
-        echo "$schedule /usr/local/bin/backup.sh $section" >> mycron
+    if [ -s "$error_file" ]; then
+        log_error <<< "$(cat "$error_file")"
+        rm "$error_file"
+        : > mycron
+    else
+        rm "$error_file"
     fi
-done
+
+    # Loop through each section and add the cron job
+    for section in $(awk -F '[][]' '/\[[^]]+\]/{print $2}' $CFG_FILE); do
+        read_config "$section"
+        if [[ -n "$schedule" ]]; then
+            echo "$schedule /usr/local/bin/backup.sh $section" >> mycron
+        fi
+    done
+}
+
+# Set the working directory
+cd "$WORK_DIR" || exit
+
+# Set the timezone as defined by Environmental variable
+set_tz
 
 # Install the new crontab file
+sync_cron
 crontab mycron 2> >(log_error)
 rm mycron 2> >(log_error)
 
@@ -125,8 +124,8 @@ else
   log "Cron is running."
 fi
 
-# Check if the CIFS share is mountable
-# MOUNT_POINT=/src/cifs
+# Check if the CIFS shares are mountable
+log "Checking all shares are mountable"
 for section in $(awk -F '[][]' '/\[[^]]+\]/{print $2}' $CFG_FILE); do
     read_config "$section"
     MOUNT_POINT="/mnt/$section"
@@ -135,8 +134,9 @@ for section in $(awk -F '[][]' '/\[[^]]+\]/{print $2}' $CFG_FILE); do
     log "$section: //$server/$share succesfully mounted at $MOUNT_POINT... Unmounting"
     umount "$MOUNT_POINT" 2> >(log_error)
 done
+log "All shares mounted successfuly.  Starting cifs-backup"
 
 # Print a message indicating we are about to tail the log
 log "Tailing the cron log to keep the container running"
 tail -f /var/log/cron.log
-log "Remote sync now running"
+log "cifs-backup now running"
