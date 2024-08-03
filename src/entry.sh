@@ -10,15 +10,15 @@ WORK_DIR="/usr/local/bin"
 
 # Function to log to Docker logs
 log() {
-    local TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
-    echo -e "${GREEN}${TIMESTAMP}${NC} - $@"
+    printf -v timeStamp '%(%Y-%m-%d %H:%M:%S)T'
+    echo -e "${GREEN}${timeStamp}${NC} - $@"
 }
 
 # Function to log errors to Docker logs with timestamp
 log_error() {
-    local TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
+    printf -v timeStamp '%(%Y-%m-%d %H:%M:%S)T'
     while read -r line; do
-        echo -e "${YELLOW}${TIMESTAMP}${NC} - ERROR - $line" | tee -a /proc/1/fd/1
+        echo -e "${YELLOW}${timeStamp}${NC} - ERROR - $line" | tee -a /proc/1/fd/1
     done
 }
 
