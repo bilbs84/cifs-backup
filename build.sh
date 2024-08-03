@@ -1,4 +1,9 @@
 #!/bin/bash
+# Build, tag and push docker image to dockerhub.
+# usage build.sh <docker repo name> <docker tag> push latest
+# push and latest are both optional, and the order of arguments passed in must be in the correct order
+# example:- build.sh username/my-project 1.4.12_rc1 push latest
+#           will create the image username/my-project:1.4.12_rc1 and username/my-project:latest and push both to docker hub
 
 NAME=$1
 TAG=$2
