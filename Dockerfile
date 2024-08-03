@@ -8,7 +8,7 @@ RUN apk update && \
 # Copy the cron job and scripts into the container
 COPY /src/backup.sh /usr/local/bin/backup.sh
 COPY /src/entry.sh /usr/local/bin/entry.sh
-COPY readme.txt /usr/local/bin/readme.txt
+COPY README.md /usr/local/bin/README.md
 COPY config.ini /etc/config.ini
 
 # Assign alias to crond to prevent having to modify scripts
