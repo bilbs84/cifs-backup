@@ -15,14 +15,14 @@ cd "$WORK_DIR" || exit
 # Function to log to Docker logs
 log() {
     local timeStamp=$(date "+%Y-%m-%d %H:%M:%S")
-    echo "${GREEN}${timeStamp}${NC} - $@" | tee -a /proc/1/fd/1
+    echo -e "${GREEN}${timeStamp}${NC} - $@" | tee -a /proc/1/fd/1
 }
 
 # Function to log errors to Docker logs with timestamp
 log_error() {
     local timeStamp=$(date "+%Y-%m-%d %H:%M:%S")
     while read -r line; do
-        echo "${YELLOW}${timeStamp}${NC} - ERROR - $line" | tee -a /proc/1/fd/1
+        echo -e "${YELLOW}${timeStamp}${NC} - ERROR - $line" | tee -a /proc/1/fd/1
     done
 }
 
