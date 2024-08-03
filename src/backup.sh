@@ -75,31 +75,32 @@ handle_backup_sync() {
     local section=$1
     local sourceDir=$2
     local mountPoint=$3
-    local exclusions=$4
-    local compress=$5
-    local keep_days=$6
-    local server=$7
-    local share=$8
+    local subfolderName=$4
+    local exclusions=$5
+    local compress=$6
+    local keep_days=$7
+    local server=$8
+    local share=$9
 
     if [ "$compress" -eq 1 ]; then
         # Create a timestamp for the backup filename
         timeStamp=$(date +%d-%m-%Y-%H.%M)
-        mkdir -p "${mountPoint}/${section}"
-        backupFile="${mountPoint}/${section}/${section}-${timeStamp}.tar.gz"
+        mkdir -p "${mountPoint}/${subfolderName}"
+        backupFile="${mountPoint}/${subfolderName}/${section}-${timeStamp}.tar.gz"
         #log "tar -czvf $backupFile -C $sourceDir $exclusions . 2> >(log_error)"
         log "Creating archive of ${sourceDir}" 
         tar -czvf "$backupFile" -C "$sourceDir" $exclusions . 2> >(log_error)
-        log "//${server}/${share}/${section}/${backupFile} Successfuly created."
+        log "//${server}/${share}/${subfolderName}/${section}-${timeStamp}.tar.gz was successfuly created."
     else
-        rsync_cmd=(rsync -av --inplace --delete $exclusions "$sourceDir/" "$mountPoint/${section}/")
+        rsync_cmd=(rsync -av --inplace --delete $exclusions "$sourceDir/" "$mountPoint/${subfolderName}/")
         #log "${rsync_cmd[@]}"
         log "Creating a backup of ${sourceDir}"
         "${rsync_cmd[@]}" 2> >(log_error)
-        log "Successful backup located in //${server}/${share}/${section}."
+        log "Successful backup located in //${server}/${share}/${subfolderName}."
     fi
 
     # Delete compressed backups older than specified days
-    find "$mountPoint/$section" -type f -name "${section}-*.tar.gz" -mtime +${keep_days} -exec rm {} \; 2> >(log_error)
+    find "$mountPoint/$subfolderName" -type f -name "${section}-*.tar.gz" -mtime +${keep_days} -exec rm {} \; 2> >(log_error)
 }
 
 # Check if the script is run as superuser
@@ -131,8 +132,7 @@ if [[ -n "$SECTION" ]]; then
         : ${subfolderName:=$SECTION}  # Will implement in a future release
         
         MOUNT_POINT="/mnt/$SECTION"
-        # MOUNT_POINT="/mnt/$subfolderName"
-
+        
         if [[ -z "$server" || -z "$share" || -z "$user" || -z "$password" || -z "$source" ]]; then
             log "Skipping section $SECTION due to missing required fields."
             exit 1
@@ -143,7 +143,7 @@ if [[ -n "$SECTION" ]]; then
 
         if is_mounted "$MOUNT_POINT"; then
             log "CIFS share is mounted for section: $SECTION"
-            handle_backup_sync "$SECTION" "$source" "$MOUNT_POINT" "$exclusions" "$compress" "$keep" "$server" "$share"
+            handle_backup_sync "$SECTION" "$source" "$MOUNT_POINT" "$subfolderName" "$exclusions" "$compress" "$keep" "$server" "$share"
             unmount_cifs "$MOUNT_POINT"
             log "Backup and sync finished for section: $SECTION"
         else
