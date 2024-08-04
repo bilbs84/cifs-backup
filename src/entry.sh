@@ -6,6 +6,7 @@ GREEN="\033[0;32m"
 YELLOW="\033[1;33m"
 NC="\033[0m"
 error_file=$(mktemp)
+cronConfig=$(mktemp)
 WORK_DIR="/usr/local/bin"
 
 # Function to log to Docker logs
@@ -67,11 +68,12 @@ check_mount() {
 }
 
 mount_cifs() {
-    local mount_point=$1
-    local user=$2
-    local password=$3
-    local server=$4
-    local share=$5
+    local \
+        mount_point=$1 \
+        user=$2 \
+        password=$3 \
+        server=$4 \
+        share=$5
 
     mkdir -p "$mount_point" 2> >(log_error)
     mount -t cifs -o username="$user",password="$password",vers=3.0 //"$server"/"$share" "$mount_point" 2> >(log_error)
@@ -79,35 +81,50 @@ mount_cifs() {
 
 # Create or clear the crontab file
 sync_cron() {
-    crontab -l > mycron 2> "$error_file"
+    local \
+        configStart="###CIFS_BACKUP CONFIG###" \
+        configEnd="###END CONFIG###"
 
+    # Read current cron configuration into a temporary file
+    crontab -l > $cronConfig 2> "$error_file"
+
+    # Check and log any errors with readin in configuration
     if [ -s "$error_file" ]; then
         log_error <<< "$(cat "$error_file")"
         rm "$error_file"
-        : > mycron
+        : > $cronConfig
     else
         rm "$error_file"
     fi
+
+    # Remove any previous configuration entries that we made
+    sed -i "/$configStart/,/$configEnd/d" "$cronConfig"
+
+    # Add start marker for configuration
+    echo "$configStart" >> $cronConfig
 
     # Loop through each section and add the cron job
     for section in $(awk -F '[][]' '/\[[^]]+\]/{print $2}' $CFG_FILE); do
         read_config "$section"
         if [[ -n "$schedule" ]]; then
-            echo "$schedule /usr/local/bin/backup.sh $section" >> mycron
+            echo "$schedule /usr/local/bin/backup.sh $section" >> $cronConfig
         fi
     done
+
+    # Add end marker for configuration
+    echo "$configEnd" >> $cronConfig
 }
 
 # Set the working directory
-cd "$WORK_DIR" || exit
+#cd "$WORK_DIR" || exit
 
 # Set the timezone as defined by Environmental variable
 set_tz
 
 # Install the new crontab file
 sync_cron
-crontab mycron 2> >(log_error)
-rm mycron 2> >(log_error)
+crontab "$cronConfig" 2> >(log_error)
+rm "$cronConfig" 2> >(log_error)
 
 # Ensure cron log file exists
 touch /var/log/cron.log 2> >(log_error)

@@ -6,11 +6,11 @@ GREEN="\033[0;32m"
 YELLOW="\033[1;33m"
 NC="\033[0m"
 WORK_DIR="/usr/local/bin"
-LOCK_FILE="/tmp/$1.lock"
 SECTION=$1
+LOCK_FILE="/tmp/$SECTION.lock"
 
 # Set the working directory
-cd "$WORK_DIR" || exit
+#cd "$WORK_DIR" || exit
 
 # Function to log to Docker logs
 log() {
@@ -48,11 +48,12 @@ read_config() {
 
 # Function to mount the CIFS share
 mount_cifs() {
-    local mountPoint=$1
-    local server=$2
-    local share=$3
-    local user=$4
-    local password=$5
+    local \
+        mountPoint=$1 \
+        server=$2 \
+        share=$3 \
+        user=$4 \
+        password=$5
 
     mkdir -p "$mountPoint" 2> >(log_error)
     mount -t cifs -o username="$user",password="$password",vers=3.0 //"$server"/"$share" "$mountPoint" 2> >(log_error)
@@ -72,15 +73,16 @@ is_mounted() {
 
 # Function to handle backup and sync
 handle_backup_sync() {
-    local section=$1
-    local sourceDir=$2
-    local mountPoint=$3
-    local subfolderName=$4
-    local exclusions=$5
-    local compress=$6
-    local keep_days=$7
-    local server=$8
-    local share=$9
+    local \
+        section=$1 \
+        sourceDir=$2 \
+        mountPoint=$3 \
+        subfolderName=$4 \
+        exclusions=$5 \
+        compress=$6 \
+        keep_days=$7 \
+        server=$8 \
+        share=$9 \
 
     if [ "$compress" -eq 1 ]; then
         # Create a timestamp for the backup filename
