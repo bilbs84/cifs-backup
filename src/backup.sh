@@ -107,10 +107,20 @@ handle_backup_sync() {
         
     else
         rsync_cmd=(rsync -av --inplace --delete $exclusions "${sourceDir}/" "${mountPoint}/${subfolderName}/")
-        #log "${rsync_cmd[@]}"
         log "Creating a backup of ${sourceDir}"
-        "${rsync_cmd[@]}" 2> >(log_error)
+
+        # Capture the rsync output
+        rsync_output=$("${rsync_cmd[@]}" 2> >(log_error))
+
+        # Log the output for debugging purposes
+        log "$rsync_output"
+
+        # Extract the total bytes transferred
+        bytes_transferred=$(echo "$rsync_output" | grep 'total size is' | awk '{print $4}')
+
+        # Log the successful backup and the total bytes transferred
         log "Successful backup located in //${server}/${share}/${subfolderName}."
+        log "Total bytes transferred: $bytes_transferred"
     fi
 
 }
