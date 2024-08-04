@@ -73,17 +73,20 @@ is_mounted() {
 
 # Function to convert bytes to human-readable format
 bytesHuman() {
-    local \
-        bytes=$1 \
-        kib=$(echo "scale=2; $bytes / 1024" | bc) \
-        mib=$(echo "scale=2; $kib / 1024" | bc) \
-        gib=$(echo "scale=2; $mib / 1024" | bc)
+    local bytes=$(echo "$1" | tr -d ',') \
+    local kib mib gib
 
-    if (( gib > 0 )); then
+    kib=$(echo "scale=2; $bytes / 1024" | bc)
+    mib=$(echo "scale=2; $kib / 1024" | bc)
+    gib=$(echo "scale=2; $mib / 1024" | bc)
+
+    log "$kib $mib $gib"
+
+    if (( $(echo "$gib >= 1" | bc -l) )); then
         echo "${gib}G"
-    elif (( mib > 0 )); then
+    elif (( $(echo "$mib >= 1" | bc -l) )); then
         echo "${mib}M"
-    elif (( kib > 0 )); then
+    elif (( $(echo "$kib >= 1" | bc -l) )); then
         echo "${kib}K"
     else
         echo "${bytes}B"
@@ -131,16 +134,16 @@ handle_backup_sync() {
         # Capture the rsync output
         rsync_output=$("${rsync_cmd[@]}" 2> >(log_error))
 
-        # Log the output for debugging purposes
-        log "$rsync_output"
-
         # Extract the total bytes transferred
         bytesTransferred=$(echo "$rsync_output" | grep 'sent' | awk '{print $2}')
-
+        
+        # Convert the bytesTransferred into a human readable format
         bytesHuman=$(bytesHuman "$bytesTransferred")
 
         # Log the successful backup and the total bytes transferred
         log "Successful backup located in //${server}/${share}/${subfolderName}."
+        
+        # Display the total amount of data transferred
         log "Total bytes transferred: $bytesHuman"
     fi
 
