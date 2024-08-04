@@ -71,6 +71,25 @@ is_mounted() {
     mountpoint -q "$mountPoint"
 }
 
+# Function to convert bytes to human-readable format
+bytesHuman() {
+    local \
+        bytes=$1 \
+        kib=$((bytes/1024)) \
+        mib=$((kib/1024)) \
+        gib=$((mib/1024))
+
+    if (( gib > 0 )); then
+        echo "${gib}G"
+    elif (( mib > 0 )); then
+        echo "${mib}M"
+    elif (( kib > 0 )); then
+        echo "${kib}K"
+    else
+        echo "${bytes}B"
+    fi
+}
+
 # Function to handle backup and sync
 handle_backup_sync() {
     local \
@@ -116,7 +135,7 @@ handle_backup_sync() {
         log "$rsync_output"
 
         # Extract the total bytes transferred
-        bytes_transferred=$(echo "$rsync_output" | grep 'total size is' | awk '{print $4}')
+        bytes_transferred=$(bytesHuman "$(echo "$rsync_output" | grep 'total size is' | awk '{print $1}')")
 
         # Log the successful backup and the total bytes transferred
         log "Successful backup located in //${server}/${share}/${subfolderName}."
