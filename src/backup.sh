@@ -80,7 +80,7 @@ handle_backup_sync() {
         subfolderName=$4 \
         exclusions=$5 \
         compress=$6 \
-        keep_days=$7 \
+        keepDays=$7 \
         server=$8 \
         share=$9 \
 
@@ -93,16 +93,26 @@ handle_backup_sync() {
         log "Creating archive of ${sourceDir}" 
         tar -czvf "$backupFile" -C "$sourceDir" $exclusions . 2> >(log_error)
         log "//${server}/${share}/${subfolderName}/${section}-${timeStamp}.tar.gz was successfuly created."
+        # Delete compressed backups older than specified days
+        log "Checking for, and removing any backups older than ${keepDays} days old"
+        oldFiles=$(find "${mountPoint}/${subfolderName}" -type f -name "${section}-*.tar.gz" -mtime +${keepDays})
+        if [[ -n "$oldFiles" ]]; then
+            log "Found files for ${section} older than ${keepDays} days, removing files..."
+            log "$oldFiles"
+
+            find "${mountPoint}/${subfolderName}" -type f -name "${section}-*.tar.gz" -mtime +${keepDays} -exec rm {} \; 2> >(log_error)
+        else
+            log "No files older than ${keepDays} days found."
+        fi
+        
     else
-        rsync_cmd=(rsync -av --inplace --delete $exclusions "$sourceDir/" "$mountPoint/${subfolderName}/")
+        rsync_cmd=(rsync -av --inplace --delete $exclusions "${sourceDir}/" "${mountPoint}/${subfolderName}/")
         #log "${rsync_cmd[@]}"
         log "Creating a backup of ${sourceDir}"
         "${rsync_cmd[@]}" 2> >(log_error)
         log "Successful backup located in //${server}/${share}/${subfolderName}."
     fi
 
-    # Delete compressed backups older than specified days
-    find "$mountPoint/$subfolderName" -type f -name "${section}-*.tar.gz" -mtime +${keep_days} -exec rm {} \; 2> >(log_error)
 }
 
 # Check if the script is run as superuser
