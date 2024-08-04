@@ -80,8 +80,6 @@ bytesHuman() {
     mib=$(echo "scale=2; $kib / 1024" | bc)
     gib=$(echo "scale=2; $mib / 1024" | bc)
 
-    log "$kib $mib $gib"
-
     if (( $(echo "$gib >= 1" | bc -l) )); then
         echo "${gib}G"
     elif (( $(echo "$mib >= 1" | bc -l) )); then
