@@ -20,15 +20,28 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
+      - name: Determine Tag Type
+        id: tag_check
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG" == *test* ]]; then
+            echo "TAG_TYPE=test" >> $GITHUB_ENV
+          else
+            echo "TAG_TYPE=release" >> $GITHUB_ENV
+          fi
+
       - name: Build Docker image
         run: |
           IMAGE_NAME="bilbs84/cifs-backup"
           VERSION="${GITHUB_REF#refs/tags/}"
-          docker build . --file Dockerfile -t $IMAGE_NAME:$VERSION -t $IMAGE_NAME:latest
+          docker build . --file Dockerfile -t $IMAGE_NAME:$VERSION
 
       - name: Push Docker images
         run: |
           IMAGE_NAME="bilbs84/cifs-backup"
           VERSION="${GITHUB_REF#refs/tags/}"
           docker push $IMAGE_NAME:$VERSION
-          docker push $IMAGE_NAME:latest
+          if [ "$TAG_TYPE" == "release" ]; then
+            docker tag $IMAGE_NAME:$VERSION $IMAGE_NAME:latest
+            docker push $IMAGE_NAME:latest
+          fi
