@@ -75,9 +75,9 @@ is_mounted() {
 bytesHuman() {
     local \
         bytes=$1 \
-        kib=$((bytes/1024)) \
-        mib=$((kib/1024)) \
-        gib=$((mib/1024))
+        kib=$(echo "scale=2; $bytes / 1024" | bc) \
+        mib=$(echo "scale=2; $kib / 1024" | bc) \
+        gib=$(echo "scale=2; $mib / 1024" | bc)
 
     if (( gib > 0 )); then
         echo "${gib}G"
