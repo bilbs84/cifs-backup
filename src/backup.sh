@@ -112,7 +112,19 @@ handle_backup_sync() {
         #log "tar -czvf $backupFile -C $sourceDir $exclusions . 2> >(log_error)"
         log "Creating archive of ${sourceDir}" 
         tar -czvf "$backupFile" -C "$sourceDir" $exclusions . 2> >(log_error)
-        log "//${server}/${share}/${subfolderName}/${section}-${timeStamp}.tar.gz was successfuly created."
+        
+        # Check if the tar command was successful
+        if [ $? -eq 0 ]; then
+            # Get the file size of the compressed archive
+            fileSize=$(stat -c%s "$backupFile")
+            fileSizeHuman=$(bytesHuman "$fileSize")
+
+            log "//${server}/${share}/${subfolderName}/${section}-${timeStamp}.tar.gz was successfully created."
+            log "Total size of the compressed archive: $fileSizeHuman"
+        else
+            log_error "Failed to create the archive."
+        fi
+
         # Delete compressed backups older than specified days
         log "Checking for, and removing any backups older than ${keepDays} days old"
         oldFiles=$(find "${mountPoint}/${subfolderName}" -type f -name "${section}-*.tar.gz" -mtime +${keepDays})
