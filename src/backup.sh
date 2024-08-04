@@ -135,11 +135,13 @@ handle_backup_sync() {
         log "$rsync_output"
 
         # Extract the total bytes transferred
-        bytes_transferred=$(bytesHuman "$(echo "$rsync_output" | grep 'total size is' | awk '{print $1}')")
+        bytesTransferred=$(echo "$rsync_output" | grep 'sent' | awk '{print $2}')
+
+        bytesHuman=$(bytesHuman "$bytesTransferred")
 
         # Log the successful backup and the total bytes transferred
         log "Successful backup located in //${server}/${share}/${subfolderName}."
-        log "Total bytes transferred: $bytes_transferred"
+        log "Total bytes transferred: $bytesHuman"
     fi
 
 }
