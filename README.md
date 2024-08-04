@@ -31,6 +31,7 @@ server=192.168.4.69
 share=Backups
 user=backup
 password=backup
+subfolderName=server
 source=/src/backup1/folder/to/backup
 compress=0
 schedule=* * * * 0
@@ -48,6 +49,7 @@ exclude=folder-to-exlude
 exclude=folder-to-exclude/subfolder
 # Can also specify file types, or specific files to exclude
 exclude=*.sock
+subfolderName=zips
 schedule=0 * 3 * *
 
 # Backed up files will be stored in the share folder, under a subfolder of the section name
@@ -57,6 +59,7 @@ share=Backups
 user=backup
 password=backup
 source=/src/backup1/folder/to/backup
+subfolderName=zips
 compress=1
 keep=2
 schedule=30 * 3 * *
@@ -64,13 +67,14 @@ schedule=30 * 3 * *
 
 The following configuration options are required for each section
 
-- `[Unit-title]` The header for each section, also used as the subfolder on the share
+- `[Unit-title]` The header for each section, also used as the subfolder on the share when no subfolderName is specified.
 - `server` The IP address of the server for backing up to.
 - `share` The share name of the server.
 - `user` Username associated with the share.  Currently, I only offer support for password protected shares.
 - `password` The password for the share user.
 - `source` The location of the folder to backup.  Specified in the docker run command, or compose file.
 - `compress` Set to 1 to compress the contents of the source folder.
+- `subfolderName` The subdirectory on the server share that the section will be processed to.  Will default to `[Unit-title]` if blank or not present.
 - `keep` How many days to keep compressed archives, any backups older than this will be removed.
 - `exclude` And exclusions for the backup (See example above)
 - `schedule` A cron expression for the schedule that the backups will run.
@@ -97,3 +101,8 @@ CHANGELOG
 - 1.2.0: Changed base image to debain:slim to trim the image size.
 - 1.2.5-alpine: Changed base image to alpine, modified scripts to work with alpine as required.
 - 1.2.6-alpine: More work on colorization of logs.
+- 1.3.0: Migrated project to github.
+- 1.3.2: Setup github workflow to build and push image.
+- 1.3.3: Correct typos in workflow configuration.
+- 1.3.4: Update timeStamp function for logs in backup and entry scripts.
+- 1.3.5: Update cron sync function in entry.sh to prevent duplicate cron configuration, and tidy up local declarations for better readability.
