@@ -29,6 +29,7 @@ jobs:
           else
             echo "TAG_TYPE=release" >> $GITHUB_ENV
           fi
+          echo "Determined TAG_TYPE: $TAG_TYPE"
 
       - name: Build Docker image
         run: |
@@ -40,8 +41,14 @@ jobs:
         run: |
           IMAGE_NAME="bilbs84/cifs-backup"
           VERSION="${GITHUB_REF#refs/tags/}"
+          echo "Pushing image with TAG_TYPE: $TAG_TYPE"
           docker push $IMAGE_NAME:$VERSION
           if [ "$TAG_TYPE" == "release" ]; then
+            echo "Tagging and pushing as latest"
             docker tag $IMAGE_NAME:$VERSION $IMAGE_NAME:latest
             docker push $IMAGE_NAME:latest
+          else
+            echo "Not tagging as latest due to TAG_TYPE: $TAG_TYPE"
           fi
+        env:
+          TAG_TYPE: ${{ env.TAG_TYPE }}
