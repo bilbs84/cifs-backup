@@ -8,8 +8,9 @@ services:
     cifs-backup:
         container_name: cifs-backup
         volumes:
-            - /path/to/backup/folder:/src/backup1:ro
-            - /path/to/backup/folder2:/src/backup2:ro
+            - /path/to/backup/folder:/src/training:ro
+            - /path/to/backup/folder2:/src/rebel-base:ro
+            - /path/to/backup/folder3:/src/plans
             - /path/to/config.ini:/etc/config.ini
         restart: unless-stopped
         image: /bilbs84/cifs-backup:latest
@@ -21,60 +22,58 @@ services:
 
 You can define as many folders to backup as you like, and you can name the container folders as you please, as these will all get defined in the configuration file.  I like to mount them as read only to ensure that there is no possibility of messing anything up, but the scripts don't do anything the the mounted directories.
 
-<p>Here is a sample of config.ini
+<p>As of version 1.4.0, configuration now uses a yaml file instead of an ini style file.  I'm using the yaml parser, yq.  This change has been made to help prevent errors in the file, or issues with double quotes and unintended whitespaces etc.
     
 ```
-# Backups configuration
-  
-[Server]
-server=192.168.4.69
-share=Backups
-user=backup
-password=backup
-subfolderName=server
-source=/src/backup1/folder/to/backup
-compress=0
-schedule=* * * * 0
+rebel: #Section header, the name of the job being run, the mount point for the remote share, and the default subfolder name when none specified.
+  server: 192.168.1.2 # The server IP address of the backup location
+  share: Backups # The share name on the server
+  user: luke # Username - may sometime in the future add support for non password protected shares
+  passwd: skywalker
+  source: /src/rebel-base # Location of files to backup, in this case, the location specified in the docker volume mapping
+  compress: 0 # 0 uses rsync to create a copy of the folder and file structure of the directory
+  schedule: 30 1-23/2 * * * # Valid cron expression for backup schedule
+  subfolder: homeassistant # Subfolder on remote share to place backup in
 
-[ZIP-Configs]
-server=192.168.4.169
-share=configs
-user=user
-password=secret
-source=/src/backup2
-compress=1
-keep=3
-# Excludes - must be relative to the /src/backups-folder location, for example - /src/backups2/folder-to-exclude
-exclude=folder-to-exlude
-exclude=folder-to-exclude/subfolder
-# Can also specify file types, or specific files to exclude
-exclude=*.sock
-subfolderName=zips
-schedule=0 * 3 * *
+zips:
+  server: 192.168.1.2
+  share: Backups
+  user: luke
+  passwd: skywalker
+  source: /src/training
+  compress: 1
+  keep: 3
+  exclude:
+    - yoda
+    - family/lea
+    - family/dad
+    - "*.sock"
+  schedule: 0 * * * *
+  subfolder: zips
 
-# Backed up files will be stored in the share folder, under a subfolder of the section name
-[ZIP-Server]
-server=192.168.4.69
-share=Backups
-user=backup
-password=backup
-source=/src/backup1/folder/to/backup
-subfolderName=zips
-compress=1
-keep=2
-schedule=30 * 3 * *
+death-star:
+  server: 192.168.1.2
+  share: Backups
+  user: luke
+  passwd: skywalker
+  source: /src/plans
+  subfolder: configs
+  compress: 0
+  keep: 3
+  exclude: vulnerabilities
+  schedule: 0 * * * *
 ```
 
 The following configuration options are required for each section
 
-- `[Unit-title]` The header for each section, also used as the subfolder on the share when no subfolderName is specified.
+- Section header, The header for each section, also used as the subfolder on the share when no subfolderName is specified.
 - `server` The IP address of the server for backing up to.
 - `share` The share name of the server.
 - `user` Username associated with the share.  Currently, I only offer support for password protected shares.
-- `password` The password for the share user.
+- `passwd` The password for the share user.
 - `source` The location of the folder to backup.  Specified in the docker run command, or compose file.
 - `compress` Set to 1 to compress the contents of the source folder.
-- `subfolderName` The subdirectory on the server share that the section will be processed to.  Will default to `[Unit-title]` if blank or not present.
+- `subfolder` The subdirectory on the server share that the section will be processed to.  Will default to `[Unit-title]` if blank or not present.
 - `keep` How many days to keep compressed archives, any backups older than this will be removed.
 - `exclude` And exclusions for the backup (See example above)
 - `schedule` A cron expression for the schedule that the backups will run.
