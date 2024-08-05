@@ -1,0 +1,37 @@
+rebel:
+  server: 192.168.1.2
+  share: Backups
+  user: luke
+  passwd: skywalker
+  source: /src/rebel-base
+  compress: 0
+  schedule: 30 1-23/2 * * *
+  subfolder: homeassistant
+
+zips:
+  server: 192.168.1.2
+  share: Backups
+  user: luke
+  passwd: skywalker
+  source: /src/training
+  compress: 1
+  keep: 3
+  exclude:
+    - yoda
+    - family/lea
+    - family/dad
+    - "*.sock"
+  schedule: 0 * * * *
+  subfolder: zips
+
+death-star:
+  server: 192.168.1.2
+  share: Backups
+  user: luke
+  passwd: skywalker
+  source: /src/plans
+  subfolder: configs
+  compress: 0
+  keep: 3
+  exclude: vulnerabilities
+  schedule: 0 * * * *
