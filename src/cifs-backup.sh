@@ -189,7 +189,6 @@ if [[ -n "$SECTION" ]]; then
         : ${subfolder:=$SECTION}  # Will implement in a future release
 
         MOUNT_POINT="/mnt/$SECTION"
-        echo $server $share $user
 
         if [[ -z "$server" || -z "$share" || -z "$user" || -z "$passwd" || -z "$source" ]]; then
             log "Skipping section $SECTION due to missing required fields."
