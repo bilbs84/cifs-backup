@@ -35,7 +35,7 @@ jobs:
         run: |
           IMAGE_NAME="bilbs84/cifs-backup"
           VERSION="${GITHUB_REF#refs/tags/}"
-          docker build . --file Dockerfile -t $IMAGE_NAME:$VERSION
+          docker build . --file Dockerfile --no-cache -t $IMAGE_NAME:$VERSION
 
       - name: Push Docker images
         run: |
