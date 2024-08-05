@@ -9,7 +9,7 @@ RUN apk update && \
 COPY /src/cifs-backup.sh /usr/local/bin/cifs-backup.sh
 COPY /src/entry.sh /usr/local/bin/entry.sh
 COPY README.md /usr/local/bin/README.md
-COPY config.yaml /etc/config.yaml
+COPY ./config.yaml /etc/config.yaml
 
 # Assign alias to crond to prevent having to modify scripts
 RUN ln -s /usr/sbin/crond /usr/bin/cron
