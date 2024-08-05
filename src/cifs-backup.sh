@@ -199,10 +199,16 @@ if [[ -n "$SECTION" ]]; then
         mount_cifs "$MOUNT_POINT" "$server" "$share" "$user" "$passwd"
 
         if is_mounted "$MOUNT_POINT"; then
-            log "CIFS share is mounted for section: $SECTION"
-            handle_backup_sync "$SECTION" "$source" "$MOUNT_POINT" "$subfolder" "$exclusions" "$compress" "$keep" "$server" "$share"
-            unmount_cifs "$MOUNT_POINT"
-            log "Backup and sync finished for section: $SECTION"
+            if touch "$MOUNT_POINT/test" 2>/dev/null; then
+                rm "$MOUNT_POINT/test"
+                log "CIFS share is mounted for section: $SECTION"
+                handle_backup_sync "$SECTION" "$source" "$MOUNT_POINT" "$subfolder" "$exclusions" "$compress" "$keep" "$server" "$share"
+                unmount_cifs "$MOUNT_POINT"
+                log "Backup and sync finished for section: $SECTION"
+            else
+                log_critical "$MOUNT_POINT not writable, exiting..."
+                exit 1
+            fi
         else
             log "Failed to mount CIFS share for section: $SECTION"
         fi
