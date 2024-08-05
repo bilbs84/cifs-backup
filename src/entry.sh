@@ -122,7 +122,7 @@ touch /var/log/cron.log 2> >(log_error)
 
 # Start cron
 log "Starting cron service..."
-# cron 2> >(log_error) && log "Cron started successfully"
+cron 2> >(log_error) && log "Cron started successfully"
 
 # Check if cron is running
 if ! pgrep cron > /dev/null; then
