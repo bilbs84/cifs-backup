@@ -89,7 +89,7 @@ sync_cron() {
     for sec in $(yq e 'keys' $cfgFile | tr -d ' -'); do
         read_config "$sec"
         if [[ -n "$schedule" ]]; then
-            echo "$schedule /usr/local/bin/backup.sh $sec" >> $cronConfig
+            echo "$schedule /usr/local/bin/cifs-backup.sh $sec" >> $cronConfig
         fi
     done
 
