@@ -1,13 +1,19 @@
 #!/bin/bash
 # entry.sh
 
-CFG_FILE=/etc/config.ini
+cfgFile=/etc/config.yaml
 GREEN="\033[0;32m"
 YELLOW="\033[1;33m"
 NC="\033[0m"
 error_file=$(mktemp)
 cronConfig=$(mktemp)
-WORK_DIR="/usr/local/bin"
+share=""
+user=""
+passwd=""
+source=""
+compress=""
+schedule=""
+subfolder=""
 
 # Function to log to Docker logs
 log() {
@@ -32,30 +38,6 @@ set_tz() {
     else
         log_error <<< "Invalid or unset TZ variable: $TZ"
     fi
-}
-
-# Function to read the configuration file
-read_config() {
-    local section=$1
-    eval "$(awk -F "=" -v section="$section" '
-        BEGIN { in_section=0; exclusions="" }
-        /^\[/{ in_section=0 }
-        $0 ~ "\\["section"\\]" { in_section=1; next }
-        in_section && !/^#/ && $1 {
-            gsub(/^ +| +$/, "", $1)
-            gsub(/^ +| +$/, "", $2)
-            if ($1 == "exclude") {
-                exclusions = exclusions "--exclude=" $2 " "
-            } else {
-                if ($1 == "schedule") {
-                    # Escape double quotes and backslashes
-                    gsub(/"/, "\\\"", $2)
-                }
-                print $1 "=\"" $2 "\""
-            }
-        }
-        END { print "exclusions=\"" exclusions "\"" }
-    ' $CFG_FILE)"
 }
 
 # Function to check the mountpoint
@@ -104,10 +86,10 @@ sync_cron() {
     echo "$configStart" >> $cronConfig
 
     # Loop through each section and add the cron job
-    for section in $(awk -F '[][]' '/\[[^]]+\]/{print $2}' $CFG_FILE); do
-        read_config "$section"
+    for sec in $(yq e 'keys' $cfgFile | tr -d ' -'); do
+        read_config "$sec"
         if [[ -n "$schedule" ]]; then
-            echo "$schedule /usr/local/bin/backup.sh $section" >> $cronConfig
+            echo "$schedule /usr/local/bin/backup.sh $sec" >> $cronConfig
         fi
     done
 
@@ -115,8 +97,17 @@ sync_cron() {
     echo "$configEnd" >> $cronConfig
 }
 
-# Set the working directory
-#cd "$WORK_DIR" || exit
+read_config() {
+    section=$1
+    server=$(yq e ".$section.server" $cfgFile)
+    share=$(yq e ".$section.share" $cfgFile)
+    user=$(yq e ".$section.user" $cfgFile)
+    passwd=$(yq e ".$section.passwd" $cfgFile)
+    source=$(yq e ".$section.source" $cfgFile)
+    compress=$(yq e ".$section.compress" $cfgFile)
+    schedule=$(yq e ".$section.schedule" $cfgFile)
+    subfolder=$(yq e ".$section.subfolder" $cfgFile)
+}
 
 # Set the timezone as defined by Environmental variable
 set_tz
@@ -131,7 +122,7 @@ touch /var/log/cron.log 2> >(log_error)
 
 # Start cron
 log "Starting cron service..."
-cron 2> >(log_error) && log "Cron started successfully"
+# cron 2> >(log_error) && log "Cron started successfully"
 
 # Check if cron is running
 if ! pgrep cron > /dev/null; then
@@ -143,13 +134,16 @@ fi
 
 # Check if the CIFS shares are mountable
 log "Checking all shares are mountable"
-for section in $(awk -F '[][]' '/\[[^]]+\]/{print $2}' $CFG_FILE); do
-    read_config "$section"
-    MOUNT_POINT="/mnt/$section"
-    mount_cifs "$MOUNT_POINT" "$user" "$password" "$server" "$share"
-    check_mount "$MOUNT_POINT"
-    log "$section: //$server/$share succesfully mounted at $MOUNT_POINT... Unmounting"
-    umount "$MOUNT_POINT" 2> >(log_error)
+
+echo $jobs
+for sec in $(yq e 'keys' $cfgFile | tr -d ' -'); do
+    log "Reading config for $sec"
+    read_config "$sec"
+    mountPoint="/mnt/$sec"
+    mount_cifs "$mountPoint" "$user" "$passwd" "$server" "$share"
+    check_mount "$mountPoint"
+    log "${sec}: //${server}/${share} successfuly mounted at $mountPoint... Unmounting"
+    umount "$mountPoint" 2> >(log_error)
 done
 log "All shares mounted successfuly.  Starting cifs-backup"
 

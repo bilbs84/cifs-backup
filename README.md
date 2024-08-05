@@ -106,3 +106,4 @@ CHANGELOG
 - 1.3.3: Correct typos in workflow configuration.
 - 1.3.4: Update timeStamp function for logs in backup and entry scripts.
 - 1.3.5: Update cron sync function in entry.sh to prevent duplicate cron configuration, and tidy up local declarations for better readability.
+- 1.4.0: Switch to .yaml configuration file, rewrite backup and entry scripts to suit, rename backup script to match project title.

@@ -3,7 +3,7 @@ FROM alpine:latest
 
 # Install necessary packages
 RUN apk update && \
-    apk add --no-cache cifs-utils rsync dcron nano procps bash tzdata
+    apk add --no-cache cifs-utils rsync dcron nano procps bash tzdata yq
 
 # Copy the cron job and scripts into the container
 COPY /src/backup.sh /usr/local/bin/backup.sh

@@ -1,3 +1,0 @@
-5 4 * * * /app/local/bin/backup.sh Hass
-5 4 3 * * /app/local/bin/backup.sh Base
-5 4 3 2 * /app/local/bin/backup.sh NZBGet
