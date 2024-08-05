@@ -4,6 +4,7 @@
 cfgFile=/etc/config.yaml
 GREEN="\033[0;32m"
 YELLOW="\033[1;33m"
+RED="\033[1;31m"
 NC="\033[0m"
 WORK_DIR="/usr/local/bin"
 SECTION=$1
@@ -23,6 +24,14 @@ log_error() {
     printf -v timeStamp '%(%Y-%m-%d %H:%M:%S)T'
     while read -r line; do
         echo -e "${YELLOW}${timeStamp}${NC} - ERROR - $line" | tee -a /proc/1/fd/1
+    done
+}
+
+# Function to log critical errors to Docker logs with timestamp
+log_error() {
+    printf -v timeStamp '%(%Y-%m-%d %H:%M:%S)T'
+    while read -r line; do
+        echo -e "${RED}${timeStamp}${NC} - CRITICAL - $line" | tee -a /proc/1/fd/1
     done
 }
 
