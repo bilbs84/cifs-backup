@@ -6,12 +6,8 @@ GREEN="\033[0;32m"
 YELLOW="\033[1;33m"
 RED="\033[1;31m"
 NC="\033[0m"
-WORK_DIR="/usr/local/bin"
 SECTION=$1
-LOCK_FILE="/tmp/$SECTION.lock"
-
-# Set the working directory
-#cd "$WORK_DIR" || exit
+lockFile="/tmp/$SECTION.lock"
 
 # Function to log to Docker logs
 log() {
@@ -28,7 +24,7 @@ log_error() {
 }
 
 # Function to log critical errors to Docker logs with timestamp
-log_error() {
+log_critical() {
     printf -v timeStamp '%(%Y-%m-%d %H:%M:%S)T'
     while read -r line; do
         echo -e "${RED}${timeStamp}${NC} - CRITICAL - $line" | tee -a /proc/1/fd/1
@@ -118,7 +114,6 @@ handle_backup_sync() {
         timeStamp=$(date +%d-%m-%Y-%H.%M)
         mkdir -p "${mountPoint}/${subfolder}"
         backupFile="${mountPoint}/${subfolder}/${section}-${timeStamp}.tar.gz"
-        #log "tar -czvf $backupFile -C $sourceDir $exclusions . 2> >(log_error)"
         log "Creating archive of ${sourceDir}"
         tar -czvf "$backupFile" -C "$sourceDir" $exclusions . 2> >(log_error)
 
@@ -175,16 +170,16 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # Main script functions
-if [[ -n "$SECTION" ]]; then
-    log "Running backup for section: $SECTION"
+if [[ -n "$section" ]]; then
+    log "Running backup for section: $section"
     (
         flock -n 200 || {
             log "Another script is already running. Exiting."
             exit 1
         }
 
-        log "$SECTION"
-        read_config "$SECTION"
+        log "$section"
+        read_config "$section"
 
         # Set default values for missing fields
         : ${server:=""}
@@ -195,33 +190,33 @@ if [[ -n "$SECTION" ]]; then
         : ${compress:=0}
         : ${exclusions:=""}
         : ${keep:=3}
-        : ${subfolder:=$SECTION}  # Will implement in a future release
+        : ${subfolder:=$section}  # Will implement in a future release
 
-        MOUNT_POINT="/mnt/$SECTION"
+       mountPoint="/mnt/$section"
 
         if [[ -z "$server" || -z "$share" || -z "$user" || -z "$passwd" || -z "$source" ]]; then
-            log "Skipping section $SECTION due to missing required fields."
+            log "Skipping section $section due to missing required fields."
             exit 1
         fi
 
-        log "Processing section: $SECTION"
-        mount_cifs "$MOUNT_POINT" "$server" "$share" "$user" "$passwd"
+        log "Processing section: $section"
+        mount_cifs "$mountPoint" "$server" "$share" "$user" "$passwd"
 
-        if is_mounted "$MOUNT_POINT"; then
-            if touch "$MOUNT_POINT/test" 2>/dev/null; then
-                rm "$MOUNT_POINT/test"
-                log "CIFS share is mounted for section: $SECTION"
-                handle_backup_sync "$SECTION" "$source" "$MOUNT_POINT" "$subfolder" "$exclusions" "$compress" "$keep" "$server" "$share"
-                unmount_cifs "$MOUNT_POINT"
-                log "Backup and sync finished for section: $SECTION"
+        if is_mounted "$mountPoint"; then
+            if touch "$mountPoint/test" 2>/dev/null; then
+                rm "$mountPoint/test"
+                log "CIFS share is mounted for section: $section"
+                handle_backup_sync "$section" "$source" "$mountPoint" "$subfolder" "$exclusions" "$compress" "$keep" "$server" "$share"
+                unmount_cifs "$mountPoint"
+                log "Backup and sync finished for section: $section"
             else
-                log_critical "$MOUNT_POINT not writable, exiting..."
+                log_critical "$mountPoint not writable, exiting..."
                 exit 1
             fi
         else
-            log "Failed to mount CIFS share for section: $SECTION"
+            log "Failed to mount CIFS share for section: $section"
         fi
-) 200>"$LOCK_FILE"
+) 200>"$lockFile"
 else
     log "No section specified. Exiting."
     exit 1
