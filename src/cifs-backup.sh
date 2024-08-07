@@ -6,8 +6,8 @@ GREEN="\033[0;32m"
 YELLOW="\033[1;33m"
 RED="\033[1;31m"
 NC="\033[0m"
-SECTION=$1
-lockFile="/tmp/$SECTION.lock"
+section=$1
+lockFile="/tmp/$section.lock"
 
 # Function to log to Docker logs
 log() {
@@ -111,7 +111,7 @@ handle_backup_sync() {
 
     if [ "$compress" -eq 1 ]; then
         # Create a timestamp for the backup filename
-        timeStamp=$(date +%d-%m-%Y-%H.%M)
+        printf -v timeStamp '%(%Y-%m-%d %H:%M:%S)T'
         mkdir -p "${mountPoint}/${subfolder}"
         backupFile="${mountPoint}/${subfolder}/${section}-${timeStamp}.tar.gz"
         log "Creating archive of ${sourceDir}"
@@ -126,7 +126,8 @@ handle_backup_sync() {
             log "//${server}/${share}/${subfolder}/${section}-${timeStamp}.tar.gz was successfully created."
             log "Total size of the compressed archive: $fileSizeHuman"
         else
-            log_error "Failed to create the archive."
+            log_critical "Failed to create the archive, exiting"
+            exit 1
         fi
 
         # Delete compressed backups older than specified days
@@ -165,7 +166,7 @@ handle_backup_sync() {
 
 # Check if the script is run as superuser
 if [[ $EUID -ne 0 ]]; then
-   log_error <<< "This script must be run as root"
+   log_critical <<< "This script must be run as root"
    exit 1
 fi
 
@@ -174,7 +175,7 @@ if [[ -n "$section" ]]; then
     log "Running backup for section: $section"
     (
         flock -n 200 || {
-            log "Another script is already running. Exiting."
+            log_critical "Another script is already running. Exiting."
             exit 1
         }
 
@@ -190,22 +191,24 @@ if [[ -n "$section" ]]; then
         : ${compress:=0}
         : ${exclusions:=""}
         : ${keep:=3}
-        : ${subfolder:=$section}  # Will implement in a future release
+        : ${subfolder:=$section} 
 
-       mountPoint="/mnt/$section"
+        mountPoint="/mnt/$section"
 
         if [[ -z "$server" || -z "$share" || -z "$user" || -z "$passwd" || -z "$source" ]]; then
-            log "Skipping section $section due to missing required fields."
+            log_critical "$section is missing one or more required fields, exiting."
             exit 1
         fi
 
+        # Mount share.
         log "Processing section: $section"
         mount_cifs "$mountPoint" "$server" "$share" "$user" "$passwd"
 
+        # Check if mounted share is writable
         if is_mounted "$mountPoint"; then
             if touch "$mountPoint/test" 2>/dev/null; then
                 rm "$mountPoint/test"
-                log "CIFS share is mounted for section: $section"
+                log "CIFS share is mounted for $section"
                 handle_backup_sync "$section" "$source" "$mountPoint" "$subfolder" "$exclusions" "$compress" "$keep" "$server" "$share"
                 unmount_cifs "$mountPoint"
                 log "Backup and sync finished for section: $section"
@@ -214,10 +217,10 @@ if [[ -n "$section" ]]; then
                 exit 1
             fi
         else
-            log "Failed to mount CIFS share for section: $section"
+            log_critical "Failed to mount CIFS share for section: $section"
         fi
 ) 200>"$lockFile"
 else
-    log "No section specified. Exiting."
+    log_critical "No section specified. Exiting."
     exit 1
 fi
