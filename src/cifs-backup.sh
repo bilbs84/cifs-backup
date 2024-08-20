@@ -160,7 +160,7 @@ handle_backup_sync() {
         bytesHuman=$(bytesHuman "$bytesTransferred")
 
         # Log the successful backup and the total bytes transferred
-        log "Successful backup located in //${server}/${share}/${subfolder}."
+        log "Successful backup located in //${server}/${share}/${subfolder}"
 
         # Display the total amount of data transferred
         log "Total bytes transferred: $bytesHuman"
