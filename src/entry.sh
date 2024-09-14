@@ -8,8 +8,6 @@ NC="\033[0m"
 error_file=$(mktemp)
 cronConfig=$(mktemp)
 share=""
-user=""
-passwd=""
 source=""
 compress=""
 schedule=""
@@ -101,8 +99,6 @@ read_config() {
     section=$1
     server=$(yq e ".$section.server" $cfgFile)
     share=$(yq e ".$section.share" $cfgFile)
-    user=$(yq e ".$section.user" $cfgFile)
-    passwd=$(yq e ".$section.passwd" $cfgFile)
     source=$(yq e ".$section.source" $cfgFile)
     compress=$(yq e ".$section.compress" $cfgFile)
     schedule=$(yq e ".$section.schedule" $cfgFile)
@@ -140,8 +136,8 @@ for sec in $(yq e 'keys' $cfgFile | tr -d ' -'); do
     log "Reading config for $sec"
     read_config "$sec"
     mountPoint="/mnt/$sec"
-    mount_cifs "$mountPoint" "$user" "$passwd" "$server" "$share"
-    check_mount "$mountPoint"
+    # mount_cifs "$mountPoint" "$user" "$passwd" "$server" "$share"
+    # check_mount "$mountPoint"
     log "${sec}: //${server}/${share} successfuly mounted at $mountPoint... Unmounting"
     umount "$mountPoint" 2> >(log_error)
 done
