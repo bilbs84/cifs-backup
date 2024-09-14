@@ -36,8 +36,6 @@ read_config() {
     local section=$1
     server=$(yq e ".$section.server" $cfgFile)
     share=$(yq e ".$section.share" $cfgFile)
-    user=$(yq e ".$section.user" $cfgFile)
-    passwd=$(yq e ".$section.passwd" $cfgFile)
     source=$(yq e ".$section.source" $cfgFile)
     compress=$(yq e ".$section.compress" $cfgFile)
     schedule=$(yq e ".$section.schedule" $cfgFile)
@@ -49,31 +47,6 @@ read_config() {
             exclusions="${exclusions} --exclude ${e}"
         done <<< "$exclude"
     fi
-}
-
-# Function to mount the CIFS share
-mount_cifs() {
-    local \
-        mountPoint=$1 \
-        server=$2 \
-        share=$3 \
-        user=$4 \
-        password=$5
-
-    mkdir -p "$mountPoint" 2> >(log_error)
-    mount -t cifs -o username="$user",password="$password",vers=3.0 //"$server"/"$share" "$mountPoint" 2> >(log_error)
-}
-
-# Function to unmount the CIFS share
-unmount_cifs() {
-    local mountPoint=$1
-    umount "$mountPoint" 2> >(log_error)
-}
-
-# Function to check if the CIFS share is mounted
-is_mounted() {
-    local mountPoint=$1
-    mountpoint -q "$mountPoint"
 }
 
 # Function to convert bytes to human-readable format
@@ -185,39 +158,31 @@ if [[ -n "$section" ]]; then
         # Set default values for missing fields
         : ${server:=""}
         : ${share:=""}
-        : ${user:=""}
-        : ${passwd:=""}
         : ${source:=""}
         : ${compress:=0}
         : ${exclusions:=""}
         : ${keep:=3}
         : ${subfolder:=$section} 
 
-        mountPoint="/mnt/$section"
+        mountPoint="$share"
 
-        if [[ -z "$server" || -z "$share" || -z "$user" || -z "$passwd" || -z "$source" ]]; then
+        if [[ -z "$server" || -z "$share" || -z "$source" ]]; then
             log_critical "$section is missing one or more required fields, exiting."
             exit 1
         fi
 
         # Mount share.
         log "Processing section: $section"
-        mount_cifs "$mountPoint" "$server" "$share" "$user" "$passwd"
 
         # Check if mounted share is writable
-        if is_mounted "$mountPoint"; then
-            if touch "$mountPoint/test" 2>/dev/null; then
-                rm "$mountPoint/test"
-                log "CIFS share is mounted for $section"
-                handle_backup_sync "$section" "$source" "$mountPoint" "$subfolder" "$exclusions" "$compress" "$keep" "$server" "$share"
-                unmount_cifs "$mountPoint"
-                log "Backup and sync finished for section: $section"
-            else
-                log_critical "$mountPoint not writable, exiting..."
-                exit 1
-            fi
+        if touch "$mountPoint/test" 2>/dev/null; then
+            rm "$mountPoint/test"
+            log "CIFS share is mounted for $section"
+            handle_backup_sync "$section" "$source" "$mountPoint" "$subfolder" "$exclusions" "$compress" "$keep" "$server" "$share"
+            log "Backup and sync finished for section: $section"
         else
-            log_critical "Failed to mount CIFS share for section: $section"
+            log_critical "$mountPoint not writable, exiting..."
+            exit 1
         fi
 ) 200>"$lockFile"
 else
