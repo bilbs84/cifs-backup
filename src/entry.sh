@@ -139,7 +139,7 @@ for sec in $(yq e 'keys' $cfgFile | tr -d ' -'); do
     # mount_cifs "$mountPoint" "$user" "$passwd" "$server" "$share"
     # check_mount "$mountPoint"
     log "${sec}: //${server}/${share} successfuly mounted at $mountPoint... Unmounting"
-    umount "$mountPoint" 2> >(log_error)
+    # umount "$mountPoint" 2> >(log_error)
 done
 log "All shares mounted successfuly.  Starting cifs-backup"
 
